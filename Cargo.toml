@@ -19,7 +19,7 @@ lto = true
 
 
 [dependencies]
-bevy = { version = "0.10", default-features = false }
+bevy = "0.10"
 bevy-inspector-egui = "0.18"
 rand = "0.8.5"
 noise = { git = "https://github.com/Razaekel/noise-rs.git" }
