@@ -1,0 +1,28 @@
+[package]
+name = "astatine"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[profile.dev.package."*"]
+opt-level = 3
+
+[profile.dev]
+opt-level = 1
+
+[profile.release]
+panic = 'abort'
+codegen-units = 1
+opt-level = 3
+lto = true
+
+
+[dependencies]
+bevy = { version = "0.10", default-features = false }
+bevy-inspector-egui = "0.18"
+rand = "0.8.5"
+noise = { git = "https://github.com/Razaekel/noise-rs.git" }
+bevy_tileset = "0.7.0"
+bevy_common_assets = "0.6.0"
+bevy_asset_loader = "0.16.0"
