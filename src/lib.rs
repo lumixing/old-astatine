@@ -1,11 +1,13 @@
+
 use bevy::{
-    prelude::*, utils::HashMap, math::Vec3Swizzles
+    prelude::*, utils::HashMap, math::Vec3Swizzles, input::mouse::MouseWheel, core_pipeline::clear_color::ClearColorConfig
 };
 use bevy_asset_loader::prelude::*;
 use rand::seq::SliceRandom;
 use rand::prelude::*;
 use bevy_tileset::prelude::{Tileset, TilesetPlugin, Tilesets};
-use bevy_ecs_tilemap::{prelude::{TilemapRenderSettings, TilemapId, TilemapTexture}, TilemapPlugin, tiles::{TileStorage, TilePos, TileTextureIndex, TileBundle, TileColor}, TilemapBundle};
+use bevy_ecs_tilemap::{prelude::{TilemapRenderSettings, TilemapId, TilemapTexture}, TilemapPlugin, tiles::{TileStorage, TilePos, TileTextureIndex, TileBundle, TileColor, TileFlip}, TilemapBundle};
+use noise::{Fbm, Perlin, NoiseFn};
 
 #[derive(Clone, Copy, Eq, PartialEq, Debug, Hash, Default, States)]
 pub enum GameState {
@@ -146,7 +148,8 @@ pub struct TileTextures {
 
 fn spawn_camera(mut commands: Commands, tilesets: Tilesets, world: Res<WorldStorage>) {
     let mut camera_bundle = Camera2dBundle::default();
-    camera_bundle.projection.scale = 0.7;
+    camera_bundle.projection.scale = 0.5;
+    camera_bundle.camera_2d.clear_color = ClearColorConfig::Custom(Color::rgb(71./255., 209./255., 1.));
     let tileset = tilesets.get_by_name("world_tiles").unwrap();
     let tile_size = tileset.tile_size();
     let spawn_point = world.get_spawn_point();
@@ -155,8 +158,13 @@ fn spawn_camera(mut commands: Commands, tilesets: Tilesets, world: Res<WorldStor
 
     commands.spawn((
         camera_bundle,
-        LoadPoint::new(3),
+        LoadPoint::new(4),
     ));
+}
+
+fn announce_updated_chunks(rendered_chunks: Res<RenderedChunks>) {
+    if !rendered_chunks.is_changed() { return; }
+    info!("{} chunks", rendered_chunks.loaded.values().count());
 }
 
 fn despawn_chunks(
@@ -186,7 +194,6 @@ pub fn spawn_chunks(
     camera_query: Query<(&Transform, &LoadPoint), With<Camera>>,
     mut rendered_chunks: ResMut<RenderedChunks>
 ) {
-    info!("{} chunks", rendered_chunks.loaded.values().count());
     let tileset = tilesets.get_by_name("world_tiles").unwrap();
     let (transform, load_point) = camera_query.single();
     let camera_chunk_pos = camera_pos_to_chunk_pos(transform.translation.xy(), tileset.tile_size());
@@ -251,13 +258,14 @@ where
                         get_content(tile_pos_x, tile_pos_y)
                     };
 
-                    // let mut rng = thread_rng();
+                    let mut rng = thread_rng();
                     let tile_entity = builder
                         .spawn(TileBundle {
                             position: tile_pos,
                             texture_index: TileTextureIndex(tile_index),
-                            // color: TileColor(Color::hsl(0.0, 0.0, rng.gen())),
+                            color: TileColor(Color::hsl(0.0, 0.0, rng.gen_range(0.85..1.0))),
                             tilemap_id: TilemapId(builder.parent_entity()),
+                            flip: TileFlip { x: rng.gen_bool(0.5), y: rng.gen_bool(0.5), d: false },
                             ..default()
                         })
                         .id();
@@ -290,8 +298,11 @@ fn camera_pos_to_chunk_pos(camera_pos: Vec2, tile_size: Vec2) -> IVec2 {
 
 fn generate(mut commands: Commands, tilesets: Tilesets) {
     let _tileset = tilesets.get_by_name("world_tiles").unwrap();
-    let mut world = WorldStorage::from_dimensions(4200, 1200);
+    let mut world = WorldStorage::from_dimensions(1024, 256);
+    let mut rng = thread_rng();
+    let fbm = Fbm::<Perlin>::new(0);
 
+    // dirt
     for y in 0..world.get_height() {
         for x in 0..world.get_width() {
             let idx = world.linearize(x, y);
@@ -299,8 +310,74 @@ fn generate(mut commands: Commands, tilesets: Tilesets) {
         }
     }
 
+    // surface n grass
+    for x in 0..world.get_width() {
+        let val = fbm.get([x as f64 / 24.0, 0.0, 0.0]) * 32.0 + world.get_height() as f64 - 30.0;
+        world.set_tile(x as i32, val as i32, 3);
+
+        for y in (val as usize + 1)..world.get_height() {
+            world.set_tile(x as i32, y as i32, 0);
+        }
+    }
+
+    // stone
+    for x in 0..world.get_width() {
+        let val = (x as f32 * 0.4).sin() * 1.6 + world.get_height() as f32 - 50.0;
+
+        for y in (0..(val as i32)).rev() {
+            if y < val as i32 - 5 {
+                world.set_tile(x as i32, y as i32, 4);
+                continue;
+            }
+
+            let block = if rng.gen_bool(0.5) { 2 } else { 4 };
+            world.set_tile(x as i32, y as i32, block);
+        }
+    }
+
+    // caves
+    for y in 0..world.get_height() {
+        for x in 0..world.get_width() {
+            if world.get_tile(x as i32, y as i32) != 4 { continue; }
+            let val = fbm.get([x as f64 / 10.0, y as f64 / 10.0, 0.0]);
+            if val < -0.1 {
+                world.set_tile(x as i32, y as i32, 0);
+            }
+        }
+    }
+
     commands.insert_resource(world);
     commands.insert_resource(NextState(Some(GameState::InGame)));
+}
+
+fn camera_input(
+    keyboard_input: Res<Input<KeyCode>>,
+    mut scroll_evr: EventReader<MouseWheel>,
+    mut q: Query<(&mut Transform, &mut OrthographicProjection), With<Camera>>,
+) {
+    // translate camera
+    let (mut transform, mut projection) = q.single_mut();
+
+    if keyboard_input.pressed(KeyCode::A) {
+        transform.translation.x -= 5.0;
+    }
+    if keyboard_input.pressed(KeyCode::D) {
+        transform.translation.x += 5.0;
+    }
+    if keyboard_input.pressed(KeyCode::W) {
+        transform.translation.y += 5.0;
+    }
+    if keyboard_input.pressed(KeyCode::S) {
+        transform.translation.y -= 5.0;
+    }
+    if keyboard_input.pressed(KeyCode::E) {
+        projection.scale = 1.0;
+    }
+
+    // scroll zoom camera
+    for ev in scroll_evr.iter() {
+        projection.scale -= ev.y * 0.1;
+    }
 }
 
 pub fn app() -> App {
@@ -344,6 +421,8 @@ pub fn app() -> App {
         (
             despawn_chunks,
             spawn_chunks,
+            camera_input,
+            announce_updated_chunks
         )
             .in_set(OnUpdate(GameState::InGame)),
     );
