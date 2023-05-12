@@ -26,3 +26,4 @@ noise = { git = "https://github.com/Razaekel/noise-rs.git" }
 bevy_tileset = "0.7.0"
 bevy_common_assets = "0.6.0"
 bevy_asset_loader = "0.16.0"
+bevy_ecs_tilemap = "0.10.0"
