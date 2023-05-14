@@ -131,7 +131,7 @@ where
                         .spawn(TileBundle {
                             position: tile_pos,
                             texture_index: TileTextureIndex(tile_index),
-                            color: TileColor(Color::hsl(0.0, 0.0, rng.gen_range(0.85..1.0))),
+                            // color: TileColor(Color::hsl(0.0, 0.0, rng.gen_range(0.85..1.0))),
                             tilemap_id: TilemapId(builder.parent_entity()),
                             flip: tile_flip,
                             ..default()

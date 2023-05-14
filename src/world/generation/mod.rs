@@ -2,6 +2,7 @@ mod dirt;
 mod surface;
 mod stone;
 mod caves;
+mod border;
 
 use bevy::prelude::*;
 
@@ -25,6 +26,7 @@ fn generate(mut commands: Commands) {
     surface::generate(&mut rng, &mut world);
     stone::generate(&mut rng, &mut world);
     caves::generate(&mut rng, &mut world);
+    border::generate(&mut world);
 
     commands.insert_resource(world);
     commands.insert_resource(NextState(Some(GameState::InGame)));
