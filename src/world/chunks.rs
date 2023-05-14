@@ -4,6 +4,7 @@ use bevy_tileset::prelude::*;
 use rand::prelude::*;
 
 use super::storage::WorldStorage;
+use crate::world::blocks::Blocks;
 
 const CHUNK_SIZE: UVec2 = UVec2 { x: 64, y: 64 };
 #[allow(dead_code)]
@@ -68,9 +69,9 @@ pub fn spawn_chunks(
             let chunk_pos = IVec2::new(x, y);
             if rendered_chunks.loaded.contains_key(&chunk_pos) { continue; }
             let chunk = spawn_chunk(
-                &mut commands, // revert this if any issues!
+                &mut commands,
                 |x, y| world_storage.in_bounds(x, y),
-                |x, y| world_storage.get_tile(x, y),
+                |x, y| world_storage.get_tile(x, y) as u32,
                 tileset,
                 chunk_pos,
                 11.0,
@@ -121,17 +122,17 @@ where
                         get_content(tile_pos_x, tile_pos_y)
                     };
 
-                    let mut rng = thread_rng();
-                    let tile_flip = match tile_index {
-                        3 => TileFlip { x: false, y: false, d: false },
-                        _ => TileFlip { x: rng.gen_bool(0.5), y: rng.gen_bool(0.5), d: false }
+                    let tile_flip = if tile_index == Blocks::Grass as u32 {
+                        TileFlip { x: false, y: false, d: false }
+                    } else {
+                        let mut rng = thread_rng();
+                        TileFlip { x: rng.gen_bool(0.5), y: rng.gen_bool(0.5), d: false }
                     };
 
                     let tile_entity = builder
                         .spawn(TileBundle {
                             position: tile_pos,
                             texture_index: TileTextureIndex(tile_index),
-                            // color: TileColor(Color::hsl(0.0, 0.0, rng.gen_range(0.85..1.0))),
                             tilemap_id: TilemapId(builder.parent_entity()),
                             flip: tile_flip,
                             ..default()

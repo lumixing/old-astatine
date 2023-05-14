@@ -1,6 +1,7 @@
 use rand::{rngs::ThreadRng, Rng};
 
 use crate::world::WorldStorage;
+use crate::world::blocks::Blocks;
 
 const STONE_LENGTH: f32 = 0.4;
 const STONE_HEIGHT: f32 = 1.6;
@@ -16,11 +17,11 @@ pub fn generate(
 
         for y in (0..val).rev() {
             if y < val - STONE_THRESHOLD {
-                world.set_tile_usize(x, y, 4);
+                world.set_tile_usize(x, y, Blocks::Stone);
                 continue;
             }
 
-            let block = if rng.gen_bool(0.5) { 2 } else { 4 };
+            let block = if rng.gen_bool(0.5) { Blocks::Dirt } else { Blocks::Stone };
             world.set_tile_usize(x, y, block);
         }
     }

@@ -1,6 +1,7 @@
 mod storage;
 mod chunks;
 mod generation;
+mod blocks;
 
 pub use chunks::LoadPoint;
 pub use storage::WorldStorage;

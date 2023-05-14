@@ -1,5 +1,7 @@
 use bevy::prelude::*;
 
+use super::blocks::Blocks;
+
 #[derive(Resource)]
 pub struct WorldStorage {
     tiles: Vec<u32>,
@@ -57,32 +59,34 @@ impl WorldStorage {
     }
 
     #[inline]
-    pub fn get_tile(&self, x: i32, y: i32) -> u32 {
+    pub fn get_tile(&self, x: i32, y: i32) -> Blocks {
         assert!(x >= 0 && y >= 0);
 
         self.get_tile_idx(self.linearize(x as usize, y as usize))
     }
 
+    /// used for loops
     #[inline]
-    pub fn get_tile_usize(&self, x: usize, y: usize) -> u32 {
+    pub fn get_tile_usize(&self, x: usize, y: usize) -> Blocks {
         self.get_tile_idx(self.linearize(x, y))
     }
 
     #[inline]
-    pub fn get_tile_idx(&self, idx: usize) -> u32 {
-        self.tiles[idx]
+    pub fn get_tile_idx(&self, idx: usize) -> Blocks {
+        Blocks::from(self.tiles[idx])
     }
 
     #[inline]
-    pub fn set_tile(&mut self, x: i32, y: i32, tile: u32) {
+    pub fn set_tile(&mut self, x: i32, y: i32, tile: Blocks) {
         assert!(x >= 0 && y >= 0);
 
-        self.set_tile_idx(self.linearize(x as usize, y as usize), tile);
+        self.set_tile_idx(self.linearize(x as usize, y as usize), tile as u32);
     }
 
+    /// used for loops
     #[inline]
-    pub fn set_tile_usize(&mut self, x: usize, y: usize, tile: u32) {
-        self.set_tile_idx(self.linearize(x, y), tile);
+    pub fn set_tile_usize(&mut self, x: usize, y: usize, tile: Blocks) {
+        self.set_tile_idx(self.linearize(x, y), tile as u32);
     }
 
     #[inline]

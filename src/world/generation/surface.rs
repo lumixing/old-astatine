@@ -2,6 +2,7 @@ use noise::{NoiseFn, Perlin, Fbm};
 use rand::{rngs::ThreadRng, Rng};
 
 use crate::world::WorldStorage;
+use crate::world::blocks::Blocks;
 
 const SURFACE_LENGTH: f64 = 24.0;
 const SURFACE_HEIGHT: f64 = 24.0;
@@ -15,10 +16,10 @@ pub fn generate(
 
     for x in 0..world.get_width() {
         let val = (fbm.get([x as f64 / SURFACE_LENGTH, 0.0, 0.0]) * SURFACE_HEIGHT + world.get_height() as f64 - SURFACE_OFFSET) as usize;
-        world.set_tile_usize(x, val, 3);
+        world.set_tile_usize(x, val, Blocks::Grass);
 
         for y in (val + 1)..world.get_height() {
-            world.set_tile_usize(x, y, 0);
+            world.set_tile_usize(x, y, Blocks::Air);
         }
     }
 }
