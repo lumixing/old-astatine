@@ -44,7 +44,6 @@ pub fn despawn_chunks(
     let (camera_transform, load_point) = camera_query.single();
     for (chunk_entity, chunk_transform) in chunks_query.iter() {
         if camera_transform.translation.xy().distance(chunk_transform.translation.xy()) > (load_point.radius * CHUNK_SIZE.x) as f32 * tileset.tile_size().x * 2.0 {
-            info!("despawning chunk!");
             let chunk_pos = camera_pos_to_chunk_pos(chunk_transform.translation.xy(), tileset.tile_size());
             rendered_chunks.loaded.remove(&chunk_pos);
             commands.entity(chunk_entity).despawn_recursive();
@@ -68,7 +67,6 @@ pub fn spawn_chunks(
         for x in (camera_chunk_pos.x - load_point.radius as i32)..(camera_chunk_pos.x + load_point.radius as i32) {
             let chunk_pos = IVec2::new(x, y);
             if rendered_chunks.loaded.contains_key(&chunk_pos) { continue; }
-            info!("spawning chunk!");
             let chunk = spawn_chunk(
                 &mut commands, // revert this if any issues!
                 |x, y| world_storage.in_bounds(x, y),
@@ -124,13 +122,18 @@ where
                     };
 
                     let mut rng = thread_rng();
+                    let tile_flip = match tile_index {
+                        3 => TileFlip { x: false, y: false, d: false },
+                        _ => TileFlip { x: rng.gen_bool(0.5), y: rng.gen_bool(0.5), d: false }
+                    };
+
                     let tile_entity = builder
                         .spawn(TileBundle {
                             position: tile_pos,
                             texture_index: TileTextureIndex(tile_index),
                             color: TileColor(Color::hsl(0.0, 0.0, rng.gen_range(0.85..1.0))),
                             tilemap_id: TilemapId(builder.parent_entity()),
-                            flip: TileFlip { x: rng.gen_bool(0.5), y: rng.gen_bool(0.5), d: false },
+                            flip: tile_flip,
                             ..default()
                         })
                         .id();

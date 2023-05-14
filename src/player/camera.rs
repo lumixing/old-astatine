@@ -46,7 +46,7 @@ pub fn movement(
         transform.translation.y -= 5.0;
     }
     if keyboard_input.pressed(KeyCode::E) {
-        projection.scale = 1.0;
+        projection.scale = 0.5;
     }
 
     // scroll zoom camera

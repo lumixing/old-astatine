@@ -1,9 +1,11 @@
-mod uni;
+mod dirt;
+mod surface;
+mod stone;
+mod caves;
 
 use bevy::prelude::*;
 
 use crate::states::GameState;
-
 use super::WorldStorage;
 
 pub struct WorldGenerationPlugin;
@@ -19,7 +21,10 @@ fn generate(mut commands: Commands) {
     let mut world = WorldStorage::from_dimensions(1024, 128);
     let mut rng = rand::thread_rng();
 
-    uni::generate(&mut rng, &mut world);
+    dirt::generate(&mut world);
+    surface::generate(&mut rng, &mut world);
+    stone::generate(&mut rng, &mut world);
+    caves::generate(&mut rng, &mut world);
 
     commands.insert_resource(world);
     commands.insert_resource(NextState(Some(GameState::InGame)));

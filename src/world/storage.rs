@@ -64,6 +64,11 @@ impl WorldStorage {
     }
 
     #[inline]
+    pub fn get_tile_usize(&self, x: usize, y: usize) -> u32 {
+        self.get_tile_idx(self.linearize(x, y))
+    }
+
+    #[inline]
     pub fn get_tile_idx(&self, idx: usize) -> u32 {
         self.tiles[idx]
     }
@@ -73,6 +78,11 @@ impl WorldStorage {
         assert!(x >= 0 && y >= 0);
 
         self.set_tile_idx(self.linearize(x as usize, y as usize), tile);
+    }
+
+    #[inline]
+    pub fn set_tile_usize(&mut self, x: usize, y: usize, tile: u32) {
+        self.set_tile_idx(self.linearize(x, y), tile);
     }
 
     #[inline]
