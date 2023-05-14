@@ -6,6 +6,7 @@ use rand::prelude::*;
 use super::storage::WorldStorage;
 
 const CHUNK_SIZE: UVec2 = UVec2 { x: 64, y: 64 };
+#[allow(dead_code)]
 const I_CHUNK_SIZE: IVec2 = IVec2 {
     x: CHUNK_SIZE.x as i32,
     y: CHUNK_SIZE.y as i32,

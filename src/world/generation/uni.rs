@@ -1,4 +1,3 @@
-use bevy_tileset::prelude::{Tileset};
 use noise::{NoiseFn, Perlin, Fbm};
 use rand::{rngs::ThreadRng, Rng};
 
@@ -7,7 +6,6 @@ use crate::world::WorldStorage;
 pub fn generate(
     rng: &mut ThreadRng,
     world: &mut WorldStorage,
-    tileset: &Tileset,
 ) {
     let fbm = Fbm::<Perlin>::new(0);
 
