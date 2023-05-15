@@ -5,6 +5,8 @@ use crate::world::{LoadPoint, WorldStorage};
 #[derive(Component)]
 pub struct PlayerCamera;
 
+const CAMERA_MOVE_SPEED: f32 = 5.0;
+
 pub fn spawn(
     mut commands: Commands,
     tilesets: Tilesets,
@@ -34,16 +36,16 @@ pub fn movement(
     let (mut transform, mut projection) = q.single_mut();
 
     if keyboard_input.pressed(KeyCode::A) {
-        transform.translation.x -= 5.0;
+        transform.translation.x -= CAMERA_MOVE_SPEED * projection.scale;
     }
     if keyboard_input.pressed(KeyCode::D) {
-        transform.translation.x += 5.0;
+        transform.translation.x += CAMERA_MOVE_SPEED * projection.scale;
     }
     if keyboard_input.pressed(KeyCode::W) {
-        transform.translation.y += 5.0;
+        transform.translation.y += CAMERA_MOVE_SPEED * projection.scale;
     }
     if keyboard_input.pressed(KeyCode::S) {
-        transform.translation.y -= 5.0;
+        transform.translation.y -= CAMERA_MOVE_SPEED * projection.scale;
     }
     if keyboard_input.pressed(KeyCode::E) {
         projection.scale = 0.5;

@@ -1,6 +1,7 @@
 use crate::world::WorldStorage;
 use crate::world::blocks::Blocks;
 
+#[allow(dead_code)]
 pub fn generate(
     world: &mut WorldStorage,
 ) {
