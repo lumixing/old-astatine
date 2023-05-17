@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use super::blocks::Blocks;
 
-#[derive(Resource)]
+#[derive(Resource, Debug)]
 pub struct WorldStorage {
     tiles: Vec<u32>,
     walls: Vec<u32>,

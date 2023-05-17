@@ -1,13 +1,10 @@
 use bevy::{prelude::*, utils::HashMap, math::Vec3Swizzles};
 use bevy_ecs_tilemap::{tiles::*, prelude::{TilemapId, TilemapTexture}, TilemapBundle};
 use bevy_tileset::prelude::*;
-use rand::prelude::*;
 
 use super::storage::WorldStorage;
-use crate::world::blocks::Blocks;
 
 const CHUNK_SIZE: UVec2 = UVec2 { x: 64, y: 64 };
-#[allow(dead_code)]
 const I_CHUNK_SIZE: IVec2 = IVec2 {
     x: CHUNK_SIZE.x as i32,
     y: CHUNK_SIZE.y as i32,
@@ -33,6 +30,12 @@ pub struct RenderedChunks {
     loaded: HashMap<IVec2, Entity>,
 }
 
+#[derive(Component)]
+pub struct Dirty;
+
+#[derive(Component)]
+pub struct ChunkPos(IVec2);
+
 pub fn despawn_chunks(
     mut commands: Commands,
     tilesets: Tilesets,
@@ -40,7 +43,6 @@ pub fn despawn_chunks(
     chunks_query: Query<(Entity, &Transform), With<TileStorage>>,
     mut rendered_chunks: ResMut<RenderedChunks>
 ) {
-    const CHUNK_SIZE: UVec2 = UVec2 { x: 32, y: 32 };
     let tileset = tilesets.get_by_name("world_tiles").unwrap();
     let (camera_transform, load_point) = camera_query.single();
     for (chunk_entity, chunk_transform) in chunks_query.iter() {
@@ -93,7 +95,6 @@ where
     F: Fn(i32, i32) -> bool,
     V: Fn(i32, i32) -> u32,
 {
-    const CHUNK_SIZE: UVec2 = UVec2 { x: 32, y: 32 };
     let tilemap_entity = commands.spawn_empty().id();
     let mut tile_storage = TileStorage::empty(CHUNK_SIZE.into());
 
@@ -122,19 +123,11 @@ where
                         get_content(tile_pos_x, tile_pos_y)
                     };
 
-                    let tile_flip = if tile_index == Blocks::Grass as u32 {
-                        TileFlip { x: false, y: false, d: false }
-                    } else {
-                        let mut rng = thread_rng();
-                        TileFlip { x: rng.gen_bool(0.5), y: rng.gen_bool(0.5), d: false }
-                    };
-
                     let tile_entity = builder
                         .spawn(TileBundle {
                             position: tile_pos,
                             texture_index: TileTextureIndex(tile_index),
                             tilemap_id: TilemapId(builder.parent_entity()),
-                            flip: tile_flip,
                             ..default()
                         })
                         .id();
@@ -151,16 +144,33 @@ where
             transform: chunk_transform,
             ..default()
         })
+        .insert(ChunkPos(chunk_pos))
         .id()
 }
 
-fn camera_pos_to_chunk_pos(camera_pos: Vec2, tile_size: Vec2) -> IVec2 {
+pub fn camera_pos_to_chunk_pos(camera_pos: Vec2, tile_size: Vec2) -> IVec2 {
     let camera_pos = camera_pos.as_ivec2();
     let tile_size = tile_size.as_ivec2();
-    const CHUNK_SIZE: UVec2 = UVec2 { x: 32, y: 32 };
-    const I_CHUNK_SIZE: IVec2 = IVec2 {
-        x: CHUNK_SIZE.x as i32,
-        y: CHUNK_SIZE.y as i32,
-    };
     camera_pos / (I_CHUNK_SIZE * tile_size)
+}
+
+pub fn dirty_rendered_chunk(
+    mut commands: Commands,
+    chunk_pos: &IVec2, 
+    rendered_chunks: ResMut<RenderedChunks>
+) {
+    if !rendered_chunks.loaded.contains_key(chunk_pos) { return; }
+    let entity = rendered_chunks.loaded.get(chunk_pos).unwrap();
+    commands.entity(*entity).insert(Dirty);
+}
+
+pub fn despawn_dirty_chunks(
+    mut commands: Commands,
+    dirty_query: Query<(Entity, &ChunkPos), With<Dirty>>,
+    mut rendered_chunks: ResMut<RenderedChunks>
+) {
+    for (entity, chunk_pos) in dirty_query.iter() {
+        rendered_chunks.loaded.remove(&chunk_pos.0);
+        commands.entity(entity).despawn_recursive();
+    }
 }

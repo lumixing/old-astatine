@@ -1,7 +1,7 @@
 mod storage;
-mod chunks;
+pub(crate) mod chunks;
 mod generation;
-mod blocks;
+pub(crate) mod blocks;
 
 pub use chunks::LoadPoint;
 pub use storage::WorldStorage;
@@ -37,6 +37,7 @@ impl Plugin for WorldPlugin {
         app.init_resource::<chunks::RenderedChunks>();        
         app.add_systems((
             chunks::despawn_chunks,
+            chunks::despawn_dirty_chunks,
             chunks::spawn_chunks,
         ).in_set(OnUpdate(GameState::InGame)));
         app.add_plugin(generation::WorldGenerationPlugin);
