@@ -5,6 +5,8 @@ use crate::world::{LoadPoint, WorldStorage};
 use crate::world::blocks::Blocks;
 use crate::world::chunks::{self, RenderedChunks};
 
+use super::player::Player;
+
 #[derive(Component)]
 pub struct PlayerCamera;
 
@@ -30,6 +32,7 @@ pub fn spawn(
     ));
 }
 
+#[allow(dead_code)]
 pub fn movement(
     keyboard_input: Res<Input<KeyCode>>,
     mut scroll_evr: EventReader<MouseWheel>,
@@ -89,4 +92,13 @@ pub fn mouse(
         info!("clicking at tile:{tile_pos}, chunk:{chunk_pos}");
         chunks::dirty_rendered_chunk(commands, &chunk_pos, rendered_chunks);
     }
+}
+
+pub fn follow_player(
+    player_query: Query<&Transform, (With<Player>, Without<Camera>)>,
+    mut camera_query: Query<&mut Transform, With<Camera>>
+) {
+    let player_transform = player_query.single();
+    let mut camera_transform = camera_query.single_mut();
+    camera_transform.translation = player_transform.translation;
 }
