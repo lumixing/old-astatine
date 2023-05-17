@@ -7,6 +7,7 @@ use states::GameState;
 mod states;
 mod player;
 mod world;
+mod ui;
 
 pub fn app() -> App {
     let mut app = App::new();
@@ -32,6 +33,7 @@ pub fn app() -> App {
     
     app.add_plugin(player::PlayerPlugin);
     app.add_plugin(world::WorldPlugin);
+    app.add_plugin(ui::UIPlugin);
 
     app
 }

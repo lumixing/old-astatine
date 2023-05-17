@@ -1,5 +1,5 @@
 mod camera;
-mod player;
+pub mod player;
 
 use bevy::prelude::*;
 use crate::states::GameState;

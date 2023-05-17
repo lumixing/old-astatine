@@ -76,7 +76,7 @@ pub fn spawn_chunks(
                 |x, y| world_storage.get_tile(x, y) as u32,
                 tileset,
                 chunk_pos,
-                11.0,
+                1.0,
             );
             rendered_chunks.loaded.insert(chunk_pos, chunk);
         }

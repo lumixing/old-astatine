@@ -1,7 +1,7 @@
 use bevy::{prelude::*, math::vec3};
 
 #[derive(Component)]
-pub struct Velocity(Vec2);
+pub struct Velocity(pub Vec2);
 
 #[derive(Component)]
 pub struct Gravity(f32);
@@ -19,7 +19,7 @@ pub fn spawn(
                 ..default()
             },
             transform: Transform {
-                translation: vec3(0.0, 0.0, 30.0),
+                translation: vec3(100.0, 2000.0, 2.0),
                 scale: vec3(8.0, 8.0, 8.0),
                 ..default()
             },
