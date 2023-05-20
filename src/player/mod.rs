@@ -15,6 +15,8 @@ impl Plugin for PlayerPlugin {
 
         app.add_systems((
             player::update_gravity,
+            // player::update_translation,
+            player::check_for_collisions,
             player::update_translation,
             camera::follow_player, 
             camera::mouse

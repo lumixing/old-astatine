@@ -1,4 +1,8 @@
+use bevy::math::vec2;
 use bevy::{prelude::*, math::vec3};
+use bevy::sprite::collide_aabb::{collide};
+
+use crate::world::chunks::{GlobalTilePos, Collidable};
 
 #[derive(Component)]
 pub struct Velocity(pub Vec2);
@@ -19,14 +23,14 @@ pub fn spawn(
                 ..default()
             },
             transform: Transform {
-                translation: vec3(100.0, 2000.0, 2.0),
-                scale: vec3(8.0, 8.0, 8.0),
+                translation: vec3(0.0, 300.0, 20.0),
+                scale: vec3(8.0, 16.0, 8.0),
                 ..default()
             },
             ..default()
         },
         Velocity(Vec2::ZERO),
-        Gravity(2.0),
+        Gravity(1.0),
         Player
     ));
 }
@@ -44,4 +48,26 @@ pub fn update_translation(
     let (velocity, mut transform) = player_query.single_mut();
     transform.translation.x += velocity.0.x;
     transform.translation.y += velocity.0.y;
+}
+
+pub fn check_for_collisions(
+    mut player_query: Query<(&Transform, &mut Velocity), With<Player>>,
+    tile_query: Query<&GlobalTilePos, With<Collidable>>
+) {
+    let (player_transform, mut player_velocity) = player_query.single_mut();
+    for tile_pos in tile_query.iter() {
+        let collision = collide(
+            player_transform.translation, 
+            player_transform.scale.truncate(),
+            vec3(tile_pos.0.x as f32 * 8.0, tile_pos.0.y as f32 * 8.0, player_transform.translation.z),
+            vec2(8.0, 8.0)
+        );
+
+        if let Some(_did_collide) = collision {
+            info!("COLLIDE!!");
+            player_velocity.0 = Vec2::ZERO;
+        } else {
+            // info!("nofin :(");
+        }
+    }
 }

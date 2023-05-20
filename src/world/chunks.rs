@@ -1,8 +1,8 @@
-use bevy::{prelude::*, utils::HashMap, math::Vec3Swizzles};
+use bevy::{prelude::*, utils::HashMap, math::{Vec3Swizzles, Vec2Swizzles, ivec2}};
 use bevy_ecs_tilemap::{tiles::*, prelude::{TilemapId, TilemapTexture}, TilemapBundle};
 use bevy_tileset::prelude::*;
 
-use super::storage::WorldStorage;
+use super::{storage::WorldStorage, blocks::Blocks};
 
 const CHUNK_SIZE: UVec2 = UVec2 { x: 64, y: 64 };
 const I_CHUNK_SIZE: IVec2 = IVec2 {
@@ -35,6 +35,12 @@ pub struct Dirty;
 
 #[derive(Component)]
 pub struct ChunkPos(IVec2);
+
+#[derive(Component)]
+pub struct Collidable;
+
+#[derive(Component)]
+pub struct GlobalTilePos(pub IVec2);
 
 pub fn despawn_chunks(
     mut commands: Commands,
@@ -97,7 +103,6 @@ where
 {
     let tilemap_entity = commands.spawn_empty().id();
     let mut tile_storage = TileStorage::empty(CHUNK_SIZE.into());
-
     let tile_size = tileset.tile_size();
     let chunk_transform = Transform::from_translation(Vec3::new(
         chunk_pos.x as f32 * CHUNK_SIZE.x as f32 * tile_size.x,
@@ -113,7 +118,6 @@ where
             for x in 0..CHUNK_SIZE.x {
                 for y in 0..CHUNK_SIZE.y {
                     let tile_pos = TilePos { x, y };
-
                     let tile_pos_x = chunk_pos.x * CHUNK_SIZE.x as i32 + tile_pos.x as i32;
                     let tile_pos_y = chunk_pos.y * CHUNK_SIZE.y as i32 + tile_pos.y as i32;
 
@@ -124,12 +128,15 @@ where
                     };
 
                     let tile_entity = builder
-                        .spawn(TileBundle {
-                            position: tile_pos,
-                            texture_index: TileTextureIndex(tile_index),
-                            tilemap_id: TilemapId(builder.parent_entity()),
-                            ..default()
-                        })
+                        .spawn((
+                            TileBundle {
+                                position: tile_pos,
+                                texture_index: TileTextureIndex(tile_index),
+                                tilemap_id: TilemapId(builder.parent_entity()),
+                                ..default()
+                            },
+                            GlobalTilePos(ivec2(tile_pos_x, tile_pos_y))
+                        ))
                         .id();
                     tile_storage.set(&tile_pos, tile_entity);
                 }
@@ -172,5 +179,28 @@ pub fn despawn_dirty_chunks(
     for (entity, chunk_pos) in dirty_query.iter() {
         rendered_chunks.loaded.remove(&chunk_pos.0);
         commands.entity(entity).despawn_recursive();
+    }
+}
+
+pub fn make_chunk_collidable(
+    mut commands: Commands,
+    q: Query<(&ChunkPos, &TileStorage)>,
+    rendered_chunks: Res<RenderedChunks>,
+    world_storage: Res<WorldStorage>,
+) {
+    for (chunk_pos, tile_storage) in q.iter() {
+        if chunk_pos.0.xy() != ivec2(0, 0) { continue; }
+        if !rendered_chunks.loaded.contains_key(&chunk_pos.0) {
+            info!("uh oh! unloaded chunk :3");
+            break;
+        }
+        for y in 0..32 {
+            for x in 0..32 {
+                if world_storage.get_tile_usize(x, y) == Blocks::Air { continue; }
+                let entity = tile_storage.get(&TilePos { x: x as u32, y: y as u32 }).unwrap();
+                commands.entity(entity).insert(Collidable);
+            }
+        }
+        break;
     }
 }
