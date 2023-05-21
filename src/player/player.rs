@@ -1,8 +1,9 @@
-use bevy::math::vec2;
+use bevy::math::{vec2, Vec3Swizzles};
 use bevy::{prelude::*, math::vec3};
 use bevy::sprite::collide_aabb::{collide};
 
-use crate::world::chunks::{GlobalTilePos, Collidable};
+use crate::world::WorldStorage;
+use crate::world::chunks::{GlobalTilePos, Collidable, self, RenderedChunks};
 
 #[derive(Component)]
 pub struct Velocity(pub Vec2);
@@ -23,7 +24,7 @@ pub fn spawn(
                 ..default()
             },
             transform: Transform {
-                translation: vec3(0.0, 300.0, 20.0),
+                translation: vec3(100.0, 1900.0, 20.0),
                 scale: vec3(8.0, 16.0, 8.0),
                 ..default()
             },
@@ -70,4 +71,19 @@ pub fn check_for_collisions(
             // info!("nofin :(");
         }
     }
+}
+
+pub fn create_colls(
+    player_query: Query<&Transform, With<Player>>,
+    mut commands: Commands,
+    rendered_chunks: Res<RenderedChunks>,
+    world_storage: Res<WorldStorage>,
+) {
+    let player_transform = player_query.single();
+    chunks::make_coll(
+        player_transform.translation.xy(),
+        commands,
+        rendered_chunks,
+        world_storage
+    );
 }

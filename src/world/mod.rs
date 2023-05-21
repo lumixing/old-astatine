@@ -39,7 +39,7 @@ impl Plugin for WorldPlugin {
             chunks::despawn_chunks,
             chunks::despawn_dirty_chunks,
             chunks::spawn_chunks,
-            chunks::make_chunk_collidable,
+            // chunks::make_chunk_collidable,
         ).in_set(OnUpdate(GameState::InGame)));
         app.add_plugin(generation::WorldGenerationPlugin);
     }

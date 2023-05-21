@@ -1,4 +1,4 @@
-use bevy::{prelude::*, utils::HashMap, math::{Vec3Swizzles, Vec2Swizzles, ivec2}};
+use bevy::{prelude::*, utils::HashMap, math::{Vec3Swizzles, Vec2Swizzles, ivec2, vec2}};
 use bevy_ecs_tilemap::{tiles::*, prelude::{TilemapId, TilemapTexture}, TilemapBundle};
 use bevy_tileset::prelude::*;
 
@@ -202,5 +202,29 @@ pub fn make_chunk_collidable(
             }
         }
         break;
+    }
+}
+
+pub fn make_coll(
+    position: Vec2,
+    mut commands: Commands,
+    rendered_chunks: Res<RenderedChunks>,
+    world_storage: Res<WorldStorage>,
+) {
+    let chunk_pos = camera_pos_to_chunk_pos(position, vec2(8.0, 8.0));
+
+    if !rendered_chunks.loaded.contains_key(&chunk_pos) {
+        info!("tried making collisions for unrendered chunk!");
+        return;
+    }
+
+    let tile_storage = rendered_chunks.loaded.get(&chunk_pos);
+
+    for y in 0..32 {
+        for x in 0..32 {
+            if world_storage.get_tile_usize(x, y) == Blocks::Air { continue; }
+            let entity = tile_storage.get(&TilePos { x: x as u32, y: y as u32 }).unwrap();
+            commands.entity(entity).insert(Collidable);
+        }
     }
 }
