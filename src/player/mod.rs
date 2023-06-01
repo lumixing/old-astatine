@@ -14,12 +14,12 @@ impl Plugin for PlayerPlugin {
         ).in_schedule(OnEnter(GameState::InGame)));
 
         app.add_systems((
-            player::update_gravity,
-            // player::update_translation,
-            player::check_for_collisions,
+            // player::update_gravity,
+            // player::check_for_collisions,
+            player::movee,
             player::update_translation,
             camera::follow_player, 
-            camera::mouse
+            // camera::mouse
         ).in_set(OnUpdate(GameState::InGame)));
     }
 }

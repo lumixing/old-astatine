@@ -6,7 +6,7 @@ pub(crate) mod blocks;
 pub use chunks::LoadPoint;
 pub use storage::WorldStorage;
 
-use bevy::prelude::*;
+use bevy::{prelude::*, math::uvec2};
 use bevy_asset_loader::prelude::{AssetCollection, LoadingStateAppExt};
 use bevy_ecs_tilemap::prelude::TilemapRenderSettings;
 use bevy_tileset::prelude::Tileset;
@@ -27,7 +27,7 @@ pub struct WorldPlugin;
 impl Plugin for WorldPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(TilemapRenderSettings {
-            render_chunk_size: chunks::RENDER_CHUNK_SIZE,
+            render_chunk_size: uvec2(chunks::RENDER_CHUNK_SIZE, chunks::RENDER_CHUNK_SIZE),
             ..default()
         });
 
@@ -36,10 +36,11 @@ impl Plugin for WorldPlugin {
         app.add_collection_to_loading_state::<_, TileTextures>(GameState::AssetLoading);
         app.init_resource::<chunks::RenderedChunks>();        
         app.add_systems((
-            chunks::despawn_chunks,
-            chunks::despawn_dirty_chunks,
-            chunks::spawn_chunks,
-            // chunks::make_chunk_collidable,
+            chunks::init,
+        ).in_schedule(OnEnter(GameState::InGame)));
+        app.add_systems((
+            chunks::player_moved_chunk,
+            chunks::announce_chunks,
         ).in_set(OnUpdate(GameState::InGame)));
         app.add_plugin(generation::WorldGenerationPlugin);
     }
