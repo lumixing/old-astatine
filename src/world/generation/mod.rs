@@ -1,9 +1,4 @@
 mod dirt;
-mod surface;
-mod stone;
-mod caves;
-mod bedrock;
-mod border;
 
 use bevy::prelude::*;
 
@@ -20,15 +15,10 @@ impl Plugin for WorldGenerationPlugin {
 
 // if something breaks down, re-add &Tilesets and pass to gen fns 
 fn generate(mut commands: Commands) {
-    let mut world = WorldStorage::from_dimensions(1024, 256);
+    let mut world = WorldStorage::new();
     let mut rng = rand::thread_rng();
 
-    dirt::generate(&mut world);
-    surface::generate(&mut rng, &mut world);
-    stone::generate(&mut rng, &mut world);
-    caves::generate(&mut rng, &mut world);
-    bedrock::generate(&mut rng, &mut world);
-    // border::generate(&mut world);
+    dirt::generate(&mut world, &mut rng);
 
     commands.insert_resource(world);
     commands.insert_resource(NextState(Some(GameState::InGame)));

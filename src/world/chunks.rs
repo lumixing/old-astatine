@@ -1,93 +1,98 @@
-use std::ops::Div;
-
-use bevy::{prelude::*, math::{ivec2, Vec3Swizzles}, utils::HashMap};
+use bevy::{prelude::*, math::{ivec2, uvec2}, utils::HashMap};
 use bevy_ecs_tilemap::prelude::*;
 use bevy_tileset::prelude::*;
 
 use crate::player::player::Player;
 
-pub const CHUNK_SIZE: u32 = 64;
-pub const TILE_SIZE: u32 = 8;
-pub(super) const RENDER_CHUNK_SIZE: u32 = CHUNK_SIZE * 2;
+use super::{WorldStorage, storage::ChunkData};
+
+#[derive(Resource, Debug, Clone, Default)]
+pub struct RenderedChunks {
+    loaded: HashMap<IVec2, Entity>
+}
 
 #[derive(Component, Debug)]
 pub struct ChunkPos(pub IVec2);
 
-#[derive(Component, Clone, Copy, Debug)]
-pub struct LoadPoint {
-    radius: u32,
+pub const CHUNK_SIZE: u32 = 64;
+pub const TILE_SIZE: u32 = 8;
+pub(super) const RENDER_CHUNK_SIZE: u32 = CHUNK_SIZE * 2;
+pub const WORLD_SIZE: IVec2 = ivec2(4, 4);
+
+pub fn init_world_storage() {
+
 }
 
-impl LoadPoint {
-    pub fn new(radius: u32) -> Self {
-        Self { radius }
-    }
-}
-
-#[derive(Resource, Debug, Clone, Default)]
-pub struct RenderedChunks {
-    loaded: HashMap<IVec2, Entity>,
-}
-
-pub fn init(
+pub fn spawn_all_chunks(
     mut commands: Commands,
     tilesets: Tilesets,
-    mut rendered_chunks: ResMut<RenderedChunks>
-) { 
+    mut rendered_chunks: ResMut<RenderedChunks>,
+    world_storage: Res<WorldStorage>,
+) {
     let tileset = tilesets.get_by_name("world_tiles").unwrap();
-    for y in 0..4 {
-        for x in 0..4 {
+
+    for y in 0..WORLD_SIZE.y {
+        for x in 0..WORLD_SIZE.x {
             let chunk_pos = ivec2(x, y);
-            let chunk_entity = spawn_chunk(&mut commands, chunk_pos, tileset);
+            let chunk_entity = spawn_chunk(&mut commands, tileset, &world_storage.0, chunk_pos).unwrap();
             rendered_chunks.loaded.insert(chunk_pos, chunk_entity);
         }
     }
 }
 
-pub fn player_moved_chunk(
-    mut commands: Commands,
-    tilesets: Tilesets,
-    player_query: Query<&ChunkPos, (With<Player>, Changed<ChunkPos>)>,
-    mut rendered_chunks: ResMut<RenderedChunks>
-) {
-    let Ok(player_chunk_pos) = player_query.get_single() else { return };
-    info!("PLAYER MOVED REEEEE ACTIVATING CHAOS I REPEAT ACTIVATING CHAOS.");
-    let tileset = tilesets.get_by_name("world_tiles").unwrap();
-    // despawn
-    for (chunk_pos, chunk_entity) in rendered_chunks.loaded.iter() {
-        info!("deleting chunk {chunk_pos}");
-        commands.entity(*chunk_entity).despawn_recursive();
-    }
-    rendered_chunks.loaded.clear();
-    // spawn
-    rendered_chunks.loaded.insert(player_chunk_pos.0, spawn_chunk(&mut commands, player_chunk_pos.0, tileset));
-}
+// pub fn spawn_chunks_near_player(
+//     mut commands: Commands,
+//     tilesets: Tilesets,
+//     mut rendered_chunks: ResMut<RenderedChunks>,
+//     world_storage: Res<WorldStorage>,
+//     player_query: Query<&ChunkPos, (With<Player>, Changed<ChunkPos>)>
+// ) {
+//     let tileset = tilesets.get_by_name("world_tiles").unwrap();
+//     let Ok(player_chunk_pos) = player_query.get_single() else { return };
 
+//     despawn_all_chunks(&mut commands, &mut rendered_chunks);
+//     for y in -1..=1 {
+//         for x in -1..=1 {
+//             let chunk_pos = player_chunk_pos.0 + ivec2(x, y);
+//             if let Some(chunk_entity) = spawn_chunk(&mut commands, tileset, world_storage, chunk_pos) {
+//                 rendered_chunks.loaded.insert(chunk_pos, chunk_entity);
+//             }
+//         }
+//     }
+// }
+
+/// spawns and returns chunk entity if in bounds
 fn spawn_chunk(
     commands: &mut Commands,
-    chunk_pos: IVec2,
-    tileset: &Tileset
-) -> Entity {
+    tileset: &Tileset,
+    world_storage: &HashMap<IVec2, ChunkData>,
+    chunk_pos: IVec2
+) -> Option<Entity> {
+    if is_out_of_bounds(chunk_pos) { 
+        info!("couldnt spawn chunk at {chunk_pos} since its out of bounds!");
+        return None
+    }
+
     info!("spawning chunk at {chunk_pos}");
 
     let tilemap_entity = commands.spawn_empty().id();
     let mut tile_storage = TileStorage::empty(TilemapSize { x: CHUNK_SIZE, y: CHUNK_SIZE });
+    let tileset_handle = tileset.texture();
     let chunk_transform = Transform::from_translation(Vec3::new(
         chunk_pos.x as f32 * CHUNK_SIZE as f32 * TILE_SIZE as f32,
         chunk_pos.y as f32 * CHUNK_SIZE as f32 * TILE_SIZE as f32,
         0.0
     ));
 
-    let tileset_handle = tileset.texture();
-
-    commands.entity(tilemap_entity)
+    let chunk_entity = commands.entity(tilemap_entity)
         .with_children(|builder| {
             for y in 0..CHUNK_SIZE {
                 for x in 0..CHUNK_SIZE {
+                    let tile = world_storage.get(&chunk_pos).unwrap().get_tile(x as i32, y as i32).unwrap();
                     let tile_pos = TilePos { x, y };
                     let tile_entity = builder.spawn(TileBundle {
                         position: tile_pos,
-                        texture_index: TileTextureIndex((chunk_pos.y as u32 * 4 + chunk_pos.x as u32 + chunk_pos.y as u32 % 2) % 2 + 1),
+                        texture_index: TileTextureIndex(tile),
                         tilemap_id: TilemapId(builder.parent_entity()),
                         ..default()
                     }).id();
@@ -107,7 +112,23 @@ fn spawn_chunk(
             },
             ChunkPos(chunk_pos)
         ))
-        .id()
+        .id();
+    Some(chunk_entity)
+}
+
+fn despawn_all_chunks(
+    commands: &mut Commands,
+    rendered_chunks: &mut ResMut<RenderedChunks>
+) {
+    for (chunk_pos, chunk_entity) in rendered_chunks.loaded.iter() {
+        info!("despawning chunk at {chunk_pos}");
+        commands.entity(*chunk_entity).despawn_recursive();
+    }
+    rendered_chunks.loaded.clear();
+}
+
+fn is_out_of_bounds(chunk_pos: IVec2) -> bool {
+    chunk_pos.x < 0 || chunk_pos.y < 0 || chunk_pos.x >= WORLD_SIZE.x || chunk_pos.y >= WORLD_SIZE.y
 }
 
 pub fn announce_chunks(

@@ -1,120 +1,71 @@
-use bevy::prelude::*;
+use std::ops::Div;
 
-use super::blocks::Blocks;
+use bevy::{prelude::*, utils::HashMap, math::ivec2};
 
 #[derive(Resource, Debug)]
-pub struct WorldStorage {
-    tiles: Vec<u32>,
-    walls: Vec<u32>,
-    width: usize,
-    height: usize,
-    spawn_point: usize,
+pub struct WorldStorage(pub HashMap<IVec2, ChunkData>);
+
+impl WorldStorage {
+    pub fn new() -> Self {
+        let mut hashmap = HashMap::new();
+        for y in 0..4 {
+            for x in 0..4 {
+                hashmap.insert(ivec2(x, y), ChunkData::new());
+            }
+        }
+        Self(hashmap)
+    }
+
+    pub fn set(&mut self, x: i32, y: i32, i: u32) {
+        let chunk_pos = ivec2(x, y).div(64);
+        if let Some(chunk_data) = self.0.get_mut(&chunk_pos) {
+            let chunk_rel_pos = ivec2(x - chunk_pos.x * 64, y - chunk_pos.y * 64);
+            chunk_data.set_tile(chunk_rel_pos.x, chunk_rel_pos.y, i);
+        } else {
+            info!("{} -> {} is out of range!", ivec2(x, y), chunk_pos);
+        }
+    }
 }
 
-#[allow(dead_code)]
-impl WorldStorage {
-    pub fn from_dimensions(width: usize, height: usize) -> Self {
+#[derive(Debug)]
+pub struct ChunkData {
+    tiles: Vec<u32>,
+    // walls: Vec<u32>,
+    // light: Vec<u32>,
+}
+
+impl ChunkData {
+    pub fn new() -> Self {
         Self {
-            tiles: vec![0; width * height],
-            walls: vec![0; width * height],
-            width,
-            height,
-            spawn_point: 0,
+            tiles: vec![0; 64*64]
         }
     }
 
-    #[inline]
-    pub fn get_height(&self) -> usize {
-        self.height
+    pub fn get_tile(&self, x: i32, y: i32) -> Option<u32> {
+        if self.is_out_of_bounds(x, y) {
+            info!("cannot get at ({x},{y}) since it is out of bounds!");
+            return None
+        }
+
+        let lin = self.linearize(x, y);
+        Some(self.tiles[lin])
     }
 
-    #[inline]
-    pub fn get_width(&self) -> usize {
-        self.width
+    pub fn set_tile(&mut self, x: i32, y: i32, i: u32) {
+        if self.is_out_of_bounds(x, y) {
+            info!("cannot set at ({x},{y}) since it is out of bounds!");
+            return;
+        }
+
+        let lin = self.linearize(x, y);
+        self.tiles[lin] = i;
     }
 
-    pub fn get_spawn_point(&self) -> UVec2 {
-        self.delinearize(self.spawn_point)
+    pub fn is_out_of_bounds(&self, x: i32, y: i32) -> bool {
+        x < 0 || y < 0 || x >= 64 || y >= 64
     }
 
-    pub fn set_spawn_point(&mut self, x: u32, y: u32) {
-        self.spawn_point = self.linearize(x as usize, y as usize);
-    }
-
-    #[inline]
-    pub fn in_bounds(&self, x: i32, y: i32) -> bool {
-        x >= 0 && y >= 0 && x < self.width as i32 && y < self.height as i32
-    }
-
-    #[inline]
-    pub fn linearize(&self, x: usize, y: usize) -> usize {
-        x + self.width * y
-    }
-
-    #[inline]
-    pub fn delinearize(&self, idx: usize) -> UVec2 {
-        let x = idx % self.width;
-        let y = idx / self.width;
-        UVec2::new(x as u32, y as u32)
-    }
-
-    #[inline]
-    pub fn get_tile(&self, x: i32, y: i32) -> Blocks {
-        assert!(x >= 0 && y >= 0);
-
-        self.get_tile_idx(self.linearize(x as usize, y as usize))
-    }
-
-    /// used for loops
-    #[inline]
-    pub fn get_tile_usize(&self, x: usize, y: usize) -> Blocks {
-        self.get_tile_idx(self.linearize(x, y))
-    }
-
-    #[inline]
-    pub fn get_tile_idx(&self, idx: usize) -> Blocks {
-        Blocks::from(self.tiles[idx])
-    }
-
-    #[inline]
-    pub fn set_tile(&mut self, x: i32, y: i32, tile: Blocks) {
-        assert!(x >= 0 && y >= 0);
-
-        self.set_tile_idx(self.linearize(x as usize, y as usize), tile as u32);
-    }
-
-    /// used for loops
-    #[inline]
-    pub fn set_tile_usize(&mut self, x: usize, y: usize, tile: Blocks) {
-        self.set_tile_idx(self.linearize(x, y), tile as u32);
-    }
-
-    #[inline]
-    pub fn set_tile_idx(&mut self, idx: usize, tile: u32) {
-        self.tiles[idx] = tile;
-    }
-
-    #[inline]
-    pub fn get_wall(&self, x: i32, y: i32) -> u32 {
-        assert!(x >= 0 && y >= 0);
-
-        self.get_wall_idx(self.linearize(x as usize, y as usize))
-    }
-
-    #[inline]
-    pub fn get_wall_idx(&self, idx: usize) -> u32 {
-        self.walls[idx]
-    }
-
-    #[inline]
-    pub fn set_wall(&mut self, x: i32, y: i32, tile: u32) {
-        assert!(x >= 0 && y >= 0);
-
-        self.set_wall_idx(self.linearize(x as usize, y as usize), tile);
-    }
-
-    #[inline]
-    pub fn set_wall_idx(&mut self, idx: usize, wall: u32) {
-        self.walls[idx] = wall;
+    pub fn linearize(&self, x: i32, y: i32) -> usize {
+        (x + 64 * y) as usize
     }
 }
