@@ -1,5 +1,6 @@
 #[derive(Clone, Copy, Eq, PartialEq, Debug, Hash)]
 #[repr(u32)]
+#[allow(dead_code)]
 pub enum Blocks {
     Air,
     Grass,
@@ -8,6 +9,7 @@ pub enum Blocks {
     Border,
 }
 
+#[allow(dead_code)]
 impl Blocks {
     pub fn from(block: u32) -> Self {
         match block {

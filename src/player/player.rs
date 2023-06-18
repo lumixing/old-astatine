@@ -1,12 +1,12 @@
 use std::ops::Div;
 
 use bevy::input::mouse::MouseWheel;
-use bevy::math::{vec2, Vec3Swizzles, ivec2};
+use bevy::math::{Vec3Swizzles, ivec2};
 use bevy::{prelude::*, math::vec3};
-use bevy::sprite::collide_aabb::{collide};
+// use bevy::sprite::collide_aabb::{collide};
 
-use crate::world::WorldStorage;
-use crate::world::chunks::{self, ChunkPos, TILE_SIZE, CHUNK_SIZE};
+// use crate::world::WorldStorage;
+use crate::world::chunks::{ChunkPos, TILE_SIZE, CHUNK_SIZE};
 
 #[derive(Component)]
 pub struct Velocity(pub Vec2);
@@ -40,12 +40,12 @@ pub fn spawn(
     ));
 }
 
-pub fn update_gravity(
-    mut player_query: Query<(&mut Velocity, &Gravity), With<Player>>
-) {
-    let (mut velocity, gravity) = player_query.single_mut();
-    velocity.0.y = -gravity.0;
-}
+// pub fn update_gravity(
+//     mut player_query: Query<(&mut Velocity, &Gravity), With<Player>>
+// ) {
+//     let (mut velocity, gravity) = player_query.single_mut();
+//     velocity.0.y = -gravity.0;
+// }
 
 pub fn update_translation(
     mut player_query: Query<(&Velocity, &mut Transform, &mut ChunkPos), With<Player>>

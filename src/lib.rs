@@ -1,6 +1,6 @@
-
 use bevy::prelude::*;
 use bevy_asset_loader::prelude::{LoadingStateAppExt, LoadingState};
+// use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin};
 use rand::seq::SliceRandom;
 use states::GameState;
 
@@ -31,6 +31,9 @@ pub fn app() -> App {
     app.add_state::<GameState>();
     app.add_loading_state(LoadingState::new(GameState::AssetLoading).continue_to_state(GameState::WorldGeneration));
     
+    // app.add_plugin(LogDiagnosticsPlugin::default());
+    // app.add_plugin(FrameTimeDiagnosticsPlugin::default());
+
     app.add_plugin(player::PlayerPlugin);
     app.add_plugin(world::WorldPlugin);
     app.add_plugin(ui::UIPlugin);

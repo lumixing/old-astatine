@@ -1,6 +1,6 @@
-use std::ops::{Add, Mul, Div};
+use std::ops:: Div;
 
-use bevy::{prelude::*, math::{vec3, ivec2, Vec3Swizzles}};
+use bevy::{prelude::*, math::Vec3Swizzles};
 use bevy_egui::{egui, EguiContexts, EguiPlugin};
 use bevy_prototype_debug_lines::*;
 

@@ -1,4 +1,4 @@
-use bevy::{prelude::*, math::{ivec2, uvec2}, utils::HashMap};
+use bevy::{prelude::*, math::ivec2, utils::HashMap};
 use bevy_ecs_tilemap::prelude::*;
 use bevy_tileset::prelude::*;
 
@@ -11,55 +11,54 @@ pub struct RenderedChunks {
     loaded: HashMap<IVec2, Entity>
 }
 
+#[derive(Resource)]
+pub struct LightingTimer(pub Timer);
+
 #[derive(Component, Debug)]
 pub struct ChunkPos(pub IVec2);
 
 pub const CHUNK_SIZE: u32 = 64;
 pub const TILE_SIZE: u32 = 8;
-pub(super) const RENDER_CHUNK_SIZE: u32 = CHUNK_SIZE * 2;
-pub const WORLD_SIZE: IVec2 = ivec2(4, 4);
+// pub(super) const RENDER_CHUNK_SIZE: u32 = CHUNK_SIZE * 2;
+pub const WORLD_SIZE: IVec2 = ivec2(32, 32);
 
-pub fn init_world_storage() {
-
-}
-
-pub fn spawn_all_chunks(
-    mut commands: Commands,
-    tilesets: Tilesets,
-    mut rendered_chunks: ResMut<RenderedChunks>,
-    world_storage: Res<WorldStorage>,
-) {
-    let tileset = tilesets.get_by_name("world_tiles").unwrap();
-
-    for y in 0..WORLD_SIZE.y {
-        for x in 0..WORLD_SIZE.x {
-            let chunk_pos = ivec2(x, y);
-            let chunk_entity = spawn_chunk(&mut commands, tileset, &world_storage.0, chunk_pos).unwrap();
-            rendered_chunks.loaded.insert(chunk_pos, chunk_entity);
-        }
-    }
-}
-
-// pub fn spawn_chunks_near_player(
+// pub fn spawn_all_chunks(
 //     mut commands: Commands,
 //     tilesets: Tilesets,
 //     mut rendered_chunks: ResMut<RenderedChunks>,
 //     world_storage: Res<WorldStorage>,
-//     player_query: Query<&ChunkPos, (With<Player>, Changed<ChunkPos>)>
 // ) {
 //     let tileset = tilesets.get_by_name("world_tiles").unwrap();
-//     let Ok(player_chunk_pos) = player_query.get_single() else { return };
 
-//     despawn_all_chunks(&mut commands, &mut rendered_chunks);
-//     for y in -1..=1 {
-//         for x in -1..=1 {
-//             let chunk_pos = player_chunk_pos.0 + ivec2(x, y);
-//             if let Some(chunk_entity) = spawn_chunk(&mut commands, tileset, world_storage, chunk_pos) {
-//                 rendered_chunks.loaded.insert(chunk_pos, chunk_entity);
-//             }
+//     for y in 0..WORLD_SIZE.y {
+//         for x in 0..WORLD_SIZE.x {
+//             let chunk_pos = ivec2(x, y);
+//             let chunk_entity = spawn_chunk(&mut commands, tileset, &world_storage.0, chunk_pos).unwrap();
+//             rendered_chunks.loaded.insert(chunk_pos, chunk_entity);
 //         }
 //     }
 // }
+
+pub fn spawn_chunks_near_player(
+    mut commands: Commands,
+    tilesets: Tilesets,
+    mut rendered_chunks: ResMut<RenderedChunks>,
+    world_storage: Res<WorldStorage>,
+    player_query: Query<&ChunkPos, (With<Player>, Changed<ChunkPos>)>
+) {
+    let tileset = tilesets.get_by_name("world_tiles").unwrap();
+    let Ok(player_chunk_pos) = player_query.get_single() else { return };
+
+    despawn_all_chunks(&mut commands, &mut rendered_chunks);
+    for y in -1..=1 {
+        for x in -1..=1 {
+            let chunk_pos = player_chunk_pos.0 + ivec2(x, y);
+            if let Some(chunk_entity) = spawn_chunk(&mut commands, tileset, &world_storage.0, chunk_pos) {
+                rendered_chunks.loaded.insert(chunk_pos, chunk_entity);
+            }
+        }
+    }
+}
 
 /// spawns and returns chunk entity if in bounds
 fn spawn_chunk(
@@ -69,11 +68,11 @@ fn spawn_chunk(
     chunk_pos: IVec2
 ) -> Option<Entity> {
     if is_out_of_bounds(chunk_pos) { 
-        info!("couldnt spawn chunk at {chunk_pos} since its out of bounds!");
+        // info!("couldnt spawn chunk at {chunk_pos} since its out of bounds!");
         return None
     }
 
-    info!("spawning chunk at {chunk_pos}");
+    // info!("spawning chunk at {chunk_pos}");
 
     let tilemap_entity = commands.spawn_empty().id();
     let mut tile_storage = TileStorage::empty(TilemapSize { x: CHUNK_SIZE, y: CHUNK_SIZE });
@@ -86,14 +85,18 @@ fn spawn_chunk(
 
     let chunk_entity = commands.entity(tilemap_entity)
         .with_children(|builder| {
+            let chunk_data = world_storage.get(&chunk_pos).unwrap();
             for y in 0..CHUNK_SIZE {
                 for x in 0..CHUNK_SIZE {
-                    let tile = world_storage.get(&chunk_pos).unwrap().get_tile(x as i32, y as i32).unwrap();
+                    let tile = chunk_data.get_tile(x as i32, y as i32).unwrap();
+                    // let light = chunk_data.get_light(x as i32, y as i32).unwrap();
+                    
                     let tile_pos = TilePos { x, y };
                     let tile_entity = builder.spawn(TileBundle {
                         position: tile_pos,
                         texture_index: TileTextureIndex(tile),
                         tilemap_id: TilemapId(builder.parent_entity()),
+                        // color: TileColor(Color::rgb(light, light, light)),
                         ..default()
                     }).id();
                     tile_storage.set(&tile_pos, tile_entity);
@@ -116,12 +119,24 @@ fn spawn_chunk(
     Some(chunk_entity)
 }
 
+// pub fn update_lighting(
+//     mut q: Query<&mut TileColor>,
+//     mut timer: ResMut<LightingTimer>,
+//     time: Res<Time>
+// ) {
+//     timer.0.tick(time.delta());
+//     if !timer.0.finished() {return}
+//     for mut color in q.iter_mut() {
+//         color.0 = Color::WHITE;
+//     }
+// }
+
 fn despawn_all_chunks(
     commands: &mut Commands,
     rendered_chunks: &mut ResMut<RenderedChunks>
 ) {
-    for (chunk_pos, chunk_entity) in rendered_chunks.loaded.iter() {
-        info!("despawning chunk at {chunk_pos}");
+    for (_chunk_pos, chunk_entity) in rendered_chunks.loaded.iter() {
+        // info!("despawning chunk at {chunk_pos}");
         commands.entity(*chunk_entity).despawn_recursive();
     }
     rendered_chunks.loaded.clear();
@@ -135,5 +150,5 @@ pub fn announce_chunks(
     rendered_chunks: Res<RenderedChunks>
 ) {
     if !rendered_chunks.is_changed() { return }
-    info!("{} loaded chunks", rendered_chunks.loaded.keys().len());
+    // info!("{} loaded chunks", rendered_chunks.loaded.keys().len());
 }
