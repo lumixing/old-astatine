@@ -19,7 +19,7 @@ impl Plugin for PlayerPlugin {
             player::movee,
             player::update_translation,
             camera::follow_player, 
-            // camera::mouse
+            camera::mine
         ).in_set(OnUpdate(GameState::InGame)));
     }
 }

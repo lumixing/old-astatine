@@ -6,7 +6,7 @@ pub enum Blocks {
     Grass,
     Dirt,
     Stone,
-    Border,
+    Border
 }
 
 #[allow(dead_code)]
@@ -18,7 +18,7 @@ impl Blocks {
             2 => Self::Dirt,
             3 => Self::Stone,
             4 => Self::Border,
-            _ => Self::Air,
+            _ => panic!("tried accessing unknown block {block}")
         }
     }
 }

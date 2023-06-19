@@ -1,9 +1,16 @@
-use bevy::{prelude::*, core_pipeline::clear_color::ClearColorConfig, input::mouse::MouseWheel};
+use std::ops::{Div, Add};
+
+use bevy::{prelude::*, core_pipeline::clear_color::ClearColorConfig, input::mouse::MouseWheel, math::ivec2};
+use bevy_ecs_tilemap::tiles::{TileStorage, TilePos, TileTextureIndex};
+// use bevy_hanabi::*;
+// use bevy_tileset::prelude::Tilesets;
 // use bevy_tileset::prelude::Tilesets;
 
 // use crate::world::{WorldStorage};
 // use crate::world::blocks::Blocks;
 // use crate::world::chunks::{self};
+
+use crate::world::{WorldStorage, chunks::{RenderedChunks, CHUNK_SIZE_I}, blocks::Blocks};
 
 use super::player::Player;
 
@@ -28,6 +35,7 @@ pub fn spawn(
 
     commands.spawn((
         camera_bundle,
+        PlayerCamera
         // LoadPoint::new(4),
     ));
 }
@@ -63,36 +71,51 @@ pub fn movement(
     }
 }
 
-// pub fn mouse(
-//     commands: Commands,
-//     window_query: Query<&Window, With<PrimaryWindow>>,
-//     camera_query: Query<(&Camera, &GlobalTransform)>,
-//     buttons: Res<Input<MouseButton>>,
-//     mut world: ResMut<WorldStorage>,
-//     tilesets: Tilesets,
-//     rendered_chunks: ResMut<RenderedChunks>
-// ) {
-//     if !buttons.just_pressed(MouseButton::Left) { return }
+pub fn mine(
+    mouse_input: Res<Input<MouseButton>>,
+    windows: Query<&Window>,
+    camera_query: Query<(&Camera, &GlobalTransform), With<PlayerCamera>>,
+    // tilesets: Tilesets,
+    mut world_storage: ResMut<WorldStorage>,
+    // mut commands: Commands,
+    rendered_chunks: Res<RenderedChunks>,
+    mut chunk_query: Query<&mut TileStorage>,
+    mut tile_query: Query<&mut TileTextureIndex>,
+) {
+    let window = windows.single();
+    let Some(cursor_pos) = window.cursor_position() else { return; };
+    let (camera, camera_global_transform) = camera_query.single();
 
-//     let (camera, camera_transform) = camera_query.single();
-//     let Ok(primary) = window_query.get_single() else { return };
+    if mouse_input.pressed(MouseButton::Left) {
+        let Some(world_cursor_pos) = camera.viewport_to_world_2d(camera_global_transform, cursor_pos) else { return; };
+        if world_cursor_pos.x < 0.0 || world_cursor_pos.y < 0.0 { return; };
+        let tile_cursor_pos = world_cursor_pos.as_ivec2().add(4).div(8); // change this if something breaks
+        world_storage.set_tile(tile_cursor_pos.x, tile_cursor_pos.y, Blocks::Air);
 
-//     if let Some(world_position) = primary
-//         .cursor_position()
-//         .and_then(|cursor| camera.viewport_to_world(camera_transform, cursor))
-//         .map(|ray| ray.origin.truncate())
-//     {
-//         let tileset = tilesets.get_by_name("world_tiles").unwrap();
-//         let tile_pos = (world_position.as_ivec2() + 4) / 8;
-//         if !world.in_bounds(tile_pos.x, tile_pos.y) { return; }
+        let chunk_pos = tile_cursor_pos.div(64);
+        let Some(chunk_entity) = rendered_chunks.get_chunk(chunk_pos) else { return; };
+        let tile_storage = chunk_query.get_mut(*chunk_entity).unwrap();
+        let chunk_rel_pos = ivec2(tile_cursor_pos.x - chunk_pos.x * CHUNK_SIZE_I, tile_cursor_pos.y - chunk_pos.y * CHUNK_SIZE_I);
+        let tile_pos = TilePos { x: chunk_rel_pos.x as u32, y: chunk_rel_pos.y as u32 };
+        let Some(tile) = tile_storage.get(&tile_pos) else { return; };
+        let mut tile_texture = tile_query.get_mut(tile).unwrap();
+        tile_texture.0 = Blocks::Air as u32;
+    } else if mouse_input.pressed(MouseButton::Right) {
+        let Some(world_cursor_pos) = camera.viewport_to_world_2d(camera_global_transform, cursor_pos) else { return; };
+        if world_cursor_pos.x < 0.0 || world_cursor_pos.y < 0.0 { return; };
+        let tile_cursor_pos = world_cursor_pos.as_ivec2().add(4).div(8); // change this if something breaks
+        world_storage.set_tile(tile_cursor_pos.x, tile_cursor_pos.y, Blocks::Dirt);
 
-        
-//         world.set_tile(tile_pos.x, tile_pos.y, Blocks::Air);
-//         let chunk_pos = chunks::camera_pos_to_chunk_pos(world_position, tileset.tile_size());
-//         info!("clicking at tile:{tile_pos}, chunk:{chunk_pos}");
-//         chunks::dirty_rendered_chunk(commands, &chunk_pos, rendered_chunks);
-//     }
-// }
+        let chunk_pos = tile_cursor_pos.div(64);
+        let Some(chunk_entity) = rendered_chunks.get_chunk(chunk_pos) else { return; };
+        let tile_storage = chunk_query.get_mut(*chunk_entity).unwrap();
+        let chunk_rel_pos = ivec2(tile_cursor_pos.x - chunk_pos.x * CHUNK_SIZE_I, tile_cursor_pos.y - chunk_pos.y * CHUNK_SIZE_I);
+        let tile_pos = TilePos { x: chunk_rel_pos.x as u32, y: chunk_rel_pos.y as u32 };
+        let Some(tile) = tile_storage.get(&tile_pos) else { return; };
+        let mut tile_texture = tile_query.get_mut(tile).unwrap();
+        tile_texture.0 = Blocks::Dirt as u32;
+    }
+}
 
 pub fn follow_player(
     player_query: Query<&Transform, (With<Player>, Without<Camera>)>,

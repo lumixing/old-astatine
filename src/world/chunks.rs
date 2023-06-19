@@ -7,8 +7,28 @@ use crate::player::player::Player;
 use super::{WorldStorage, storage::ChunkData};
 
 #[derive(Resource, Debug, Clone, Default)]
-pub struct RenderedChunks {
-    loaded: HashMap<IVec2, Entity>
+pub struct RenderedChunks(HashMap<IVec2, Entity>);
+
+#[allow(dead_code)]
+impl RenderedChunks {
+    pub fn get_chunk(&self, chunk_pos: IVec2) -> Option<&Entity> {
+        self.hashmap().get(&chunk_pos)
+    }
+    
+    pub fn add_chunk(&mut self, chunk_pos: IVec2, chunk_entity: Entity) {
+        if is_out_of_bounds(chunk_pos) {
+            warn!("added chunk {chunk_pos} that is out of bounds");
+        }
+        self.0.insert(chunk_pos, chunk_entity);
+    }
+
+    pub fn remove_all_chunks(&mut self) {
+        self.0.clear();
+    }
+
+    pub fn hashmap(&self) -> &HashMap<IVec2, Entity> {
+        &self.0
+    }
 }
 
 #[derive(Resource)]
@@ -18,6 +38,7 @@ pub struct LightingTimer(pub Timer);
 pub struct ChunkPos(pub IVec2);
 
 pub const CHUNK_SIZE: u32 = 64;
+pub const CHUNK_SIZE_I: i32 = CHUNK_SIZE as i32;
 pub const TILE_SIZE: u32 = 8;
 // pub(super) const RENDER_CHUNK_SIZE: u32 = CHUNK_SIZE * 2;
 pub const WORLD_SIZE: IVec2 = ivec2(32, 32);
@@ -53,9 +74,9 @@ pub fn spawn_chunks_near_player(
     for y in -1..=1 {
         for x in -1..=1 {
             let chunk_pos = player_chunk_pos.0 + ivec2(x, y);
-            if let Some(chunk_entity) = spawn_chunk(&mut commands, tileset, &world_storage.0, chunk_pos) {
-                rendered_chunks.loaded.insert(chunk_pos, chunk_entity);
-            }
+            let Some(chunk_data) = world_storage.get_chunk_data(chunk_pos) else { continue; };
+            let chunk_entity = spawn_chunk(&mut commands, tileset, chunk_data, chunk_pos).unwrap(); // should be able to unwrap since chunk_data exists
+            rendered_chunks.add_chunk(chunk_pos, chunk_entity);
         }
     }
 }
@@ -64,7 +85,7 @@ pub fn spawn_chunks_near_player(
 fn spawn_chunk(
     commands: &mut Commands,
     tileset: &Tileset,
-    world_storage: &HashMap<IVec2, ChunkData>,
+    chunk_data: &ChunkData,
     chunk_pos: IVec2
 ) -> Option<Entity> {
     if is_out_of_bounds(chunk_pos) { 
@@ -85,18 +106,15 @@ fn spawn_chunk(
 
     let chunk_entity = commands.entity(tilemap_entity)
         .with_children(|builder| {
-            let chunk_data = world_storage.get(&chunk_pos).unwrap();
             for y in 0..CHUNK_SIZE {
                 for x in 0..CHUNK_SIZE {
                     let tile = chunk_data.get_tile(x as i32, y as i32).unwrap();
-                    // let light = chunk_data.get_light(x as i32, y as i32).unwrap();
                     
                     let tile_pos = TilePos { x, y };
                     let tile_entity = builder.spawn(TileBundle {
                         position: tile_pos,
-                        texture_index: TileTextureIndex(tile),
+                        texture_index: TileTextureIndex(tile as u32),
                         tilemap_id: TilemapId(builder.parent_entity()),
-                        // color: TileColor(Color::rgb(light, light, light)),
                         ..default()
                     }).id();
                     tile_storage.set(&tile_pos, tile_entity);
@@ -135,11 +153,11 @@ fn despawn_all_chunks(
     commands: &mut Commands,
     rendered_chunks: &mut ResMut<RenderedChunks>
 ) {
-    for (_chunk_pos, chunk_entity) in rendered_chunks.loaded.iter() {
+    for (_chunk_pos, chunk_entity) in rendered_chunks.hashmap().iter() {
         // info!("despawning chunk at {chunk_pos}");
         commands.entity(*chunk_entity).despawn_recursive();
     }
-    rendered_chunks.loaded.clear();
+    rendered_chunks.remove_all_chunks();
 }
 
 fn is_out_of_bounds(chunk_pos: IVec2) -> bool {
