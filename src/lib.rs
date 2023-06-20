@@ -1,14 +1,9 @@
 use bevy::prelude::*;
 use bevy_asset_loader::prelude::{LoadingStateAppExt, LoadingState};
-use bevy_hanabi::HanabiPlugin;
-// use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin};
 use rand::seq::SliceRandom;
 use states::GameState;
 
 mod states;
-mod player;
-mod world;
-mod ui;
 
 pub fn app() -> App {
     let mut app = App::new();
@@ -28,17 +23,9 @@ pub fn app() -> App {
             })
             .set(ImagePlugin::default_nearest()),
     );
-    app.add_plugin(HanabiPlugin);
 
     app.add_state::<GameState>();
     app.add_loading_state(LoadingState::new(GameState::AssetLoading).continue_to_state(GameState::WorldGeneration));
-    
-    // app.add_plugin(LogDiagnosticsPlugin::default());
-    // app.add_plugin(FrameTimeDiagnosticsPlugin::default());
-
-    app.add_plugin(player::PlayerPlugin);
-    app.add_plugin(world::WorldPlugin);
-    app.add_plugin(ui::UIPlugin);
 
     app
 }
