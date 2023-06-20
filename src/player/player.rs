@@ -1,12 +1,12 @@
 use std::ops::Div;
 
-use bevy::input::mouse::MouseWheel;
+// use bevy::input::mouse::MouseWheel;
 use bevy::math::{Vec3Swizzles, ivec2};
 use bevy::{prelude::*, math::vec3};
 // use bevy::sprite::collide_aabb::{collide};
 
 // use crate::world::WorldStorage;
-use crate::world::chunks::{ChunkPos, TILE_SIZE, CHUNK_SIZE};
+use crate::world::chunks::{ChunkPos, TILE_SIZE, CHUNK_SIZE, BlockPos};
 
 #[derive(Component)]
 pub struct Velocity(pub Vec2);
@@ -34,57 +34,33 @@ pub fn spawn(
             ..default()
         },
         ChunkPos(ivec2(0, 0)),
+        BlockPos(ivec2(0, 0)),
         Velocity(Vec2::ZERO),
         Gravity(1.0),
         Player
     ));
 }
 
-// pub fn update_gravity(
-//     mut player_query: Query<(&mut Velocity, &Gravity), With<Player>>
-// ) {
-//     let (mut velocity, gravity) = player_query.single_mut();
-//     velocity.0.y = -gravity.0;
-// }
+pub fn update_gravity(
+    mut player_query: Query<(&mut Velocity, &Gravity), With<Player>>
+) {
+    let (mut velocity, gravity) = player_query.single_mut();
+    velocity.0.y = -gravity.0;
+}
 
 pub fn update_translation(
-    mut player_query: Query<(&Velocity, &mut Transform, &mut ChunkPos), With<Player>>
+    mut player_query: Query<(&Velocity, &mut Transform, &mut ChunkPos, &mut BlockPos), With<Player>>
 ) {
-    let (velocity, mut transform, mut chunk_pos) = player_query.single_mut();
+    let (velocity, mut transform, mut chunk_pos, mut tile_pos) = player_query.single_mut();
     transform.translation.x += velocity.0.x;
     transform.translation.y += velocity.0.y;
     let current_chunk_pos = transform.translation.div((TILE_SIZE * CHUNK_SIZE) as f32).floor().xy().as_ivec2();
     if current_chunk_pos != chunk_pos.0 {
         chunk_pos.0 = current_chunk_pos;
     }
-}
-
-pub fn movee(
-    keyboard_input: Res<Input<KeyCode>>,
-    mut scroll_evr: EventReader<MouseWheel>,
-    mut plrq: Query<&mut Transform, With<Player>>,
-    mut camq: Query<&mut OrthographicProjection, With<Camera>>,
-) {
-    // translate camera
-    let mut transform = plrq.single_mut();
-    let mut projection = camq.single_mut();
-
-    if keyboard_input.pressed(KeyCode::A) {
-        transform.translation.x -= 5.0;
-    }
-    if keyboard_input.pressed(KeyCode::D) {
-        transform.translation.x += 5.0;
-    }
-    if keyboard_input.pressed(KeyCode::W) {
-        transform.translation.y += 5.0;
-    }
-    if keyboard_input.pressed(KeyCode::S) {
-        transform.translation.y -= 5.0;
-    }
-
-    // scroll zoom camera
-    for ev in scroll_evr.iter() {
-        projection.scale -= ev.y * 0.1;
+    let current_tile_pos = transform.translation.div(TILE_SIZE as f32).floor().xy().as_ivec2();
+    if current_tile_pos != tile_pos.0 {
+        tile_pos.0 = current_tile_pos;
     }
 }
 

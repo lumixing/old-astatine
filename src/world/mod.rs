@@ -2,6 +2,7 @@ mod storage;
 pub(crate) mod chunks;
 mod generation;
 pub(crate) mod blocks;
+pub(crate) mod positions;
 
 use std::time::Duration;
 
@@ -44,6 +45,8 @@ impl Plugin for WorldPlugin {
         // ).in_schedule(OnEnter(GameState::InGame)));
         app.add_systems((
             chunks::spawn_chunks_near_player,
+            chunks::unmake_all_collidables,
+            chunks::make_collidable_near_player,
             chunks::announce_chunks,
         ).in_set(OnUpdate(GameState::InGame)));
         app.add_plugin(generation::WorldGenerationPlugin);

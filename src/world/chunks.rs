@@ -4,7 +4,7 @@ use bevy_tileset::prelude::*;
 
 use crate::player::player::Player;
 
-use super::{WorldStorage, storage::ChunkData};
+use super::{WorldStorage, storage::ChunkData, positions::*};
 
 #[derive(Resource, Debug, Clone, Default)]
 pub struct RenderedChunks(HashMap<IVec2, Entity>);
@@ -34,31 +34,14 @@ impl RenderedChunks {
 #[derive(Resource)]
 pub struct LightingTimer(pub Timer);
 
-#[derive(Component, Debug)]
-pub struct ChunkPos(pub IVec2);
+#[derive(Component)]
+pub struct Collidable;
 
 pub const CHUNK_SIZE: u32 = 64;
 pub const CHUNK_SIZE_I: i32 = CHUNK_SIZE as i32;
 pub const TILE_SIZE: u32 = 8;
 // pub(super) const RENDER_CHUNK_SIZE: u32 = CHUNK_SIZE * 2;
 pub const WORLD_SIZE: IVec2 = ivec2(32, 32);
-
-// pub fn spawn_all_chunks(
-//     mut commands: Commands,
-//     tilesets: Tilesets,
-//     mut rendered_chunks: ResMut<RenderedChunks>,
-//     world_storage: Res<WorldStorage>,
-// ) {
-//     let tileset = tilesets.get_by_name("world_tiles").unwrap();
-
-//     for y in 0..WORLD_SIZE.y {
-//         for x in 0..WORLD_SIZE.x {
-//             let chunk_pos = ivec2(x, y);
-//             let chunk_entity = spawn_chunk(&mut commands, tileset, &world_storage.0, chunk_pos).unwrap();
-//             rendered_chunks.loaded.insert(chunk_pos, chunk_entity);
-//         }
-//     }
-// }
 
 pub fn spawn_chunks_near_player(
     mut commands: Commands,
@@ -73,27 +56,21 @@ pub fn spawn_chunks_near_player(
     despawn_all_chunks(&mut commands, &mut rendered_chunks);
     for y in -1..=1 {
         for x in -1..=1 {
-            let chunk_pos = player_chunk_pos.0 + ivec2(x, y);
-            let Some(chunk_data) = world_storage.get_chunk_data(chunk_pos) else { continue; };
+            let chunk_pos = player_chunk_pos + ivec2(x, y);
+            let Some(chunk_data) = world_storage.get_chunk_data(chunk_pos) else { continue; }; // skip out of bounds chunks
             let chunk_entity = spawn_chunk(&mut commands, tileset, chunk_data, chunk_pos).unwrap(); // should be able to unwrap since chunk_data exists
             rendered_chunks.add_chunk(chunk_pos, chunk_entity);
         }
     }
 }
 
-/// spawns and returns chunk entity if in bounds
 fn spawn_chunk(
     commands: &mut Commands,
     tileset: &Tileset,
     chunk_data: &ChunkData,
     chunk_pos: IVec2
 ) -> Option<Entity> {
-    if is_out_of_bounds(chunk_pos) { 
-        // info!("couldnt spawn chunk at {chunk_pos} since its out of bounds!");
-        return None
-    }
-
-    // info!("spawning chunk at {chunk_pos}");
+    if is_out_of_bounds(chunk_pos) { return None; };
 
     let tilemap_entity = commands.spawn_empty().id();
     let mut tile_storage = TileStorage::empty(TilemapSize { x: CHUNK_SIZE, y: CHUNK_SIZE });
@@ -137,17 +114,40 @@ fn spawn_chunk(
     Some(chunk_entity)
 }
 
-// pub fn update_lighting(
-//     mut q: Query<&mut TileColor>,
-//     mut timer: ResMut<LightingTimer>,
-//     time: Res<Time>
-// ) {
-//     timer.0.tick(time.delta());
-//     if !timer.0.finished() {return}
-//     for mut color in q.iter_mut() {
-//         color.0 = Color::WHITE;
-//     }
-// }
+pub fn make_collidable_near_player(
+    mut commands: Commands,
+    player_query: Query<&BlockPos, With<Player>>,
+    rendered_chunks: Res<RenderedChunks>,
+    mut chunk_query: Query<&mut TileStorage>,
+) {
+    let block_pos = player_query.single();
+    // let chunk_pos = block_pos.0.div(CHUNK_SIZE_I);
+    let chunk_pos = ChunkPos::from_block_ivec(block_pos.0);
+    // info!("making coll at {} -> {}", block_pos.0, chunk_pos.0);
+    let Some(chunk_entity) = rendered_chunks.get_chunk(chunk_pos.0) else {
+        // warn!("couldnt make collidable in unrendered chunk: {} -> {}", block_pos.0, chunk_pos.0);
+        return;
+    };
+    // i REALLY need a helper method for these fucking positions
+    let tile_storage = chunk_query.get_mut(*chunk_entity).unwrap();
+    let chunk_rel_pos = ivec2(block_pos.0.x - chunk_pos.0.x * CHUNK_SIZE_I, block_pos.0.y - chunk_pos.0.y * CHUNK_SIZE_I);
+    let tile_pos = TilePos { x: chunk_rel_pos.x as u32, y: chunk_rel_pos.y as u32 };
+    let Some(tile) = tile_storage.get(&tile_pos) else {
+        // warn!("couldnt get tile entity lol idk y");
+        return;
+    };
+    commands.entity(tile).insert(Collidable);
+}
+
+pub fn unmake_all_collidables(
+    mut commands: Commands,
+    q: Query<Entity, With<Collidable>>
+) {
+    // info!("unmaking {} colls", q.iter().count());
+    for entity in q.iter() {
+        commands.entity(entity).remove::<Collidable>();
+    }
+}
 
 fn despawn_all_chunks(
     commands: &mut Commands,
