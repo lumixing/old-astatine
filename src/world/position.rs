@@ -1,3 +1,5 @@
+use std::ops::Add;
+
 use bevy::prelude::Component;
 
 pub const CHUNK_SIZE: u32 = 64;
@@ -39,7 +41,13 @@ impl BlockPos {
     }
 }
 
-#[derive(Component, Debug, Hash, Eq, PartialEq, Copy, Clone)]
+impl PartialEq for BlockPos {
+    fn eq(&self, other: &Self) -> bool {
+        self.x == other.x && self.y == other.y
+    }
+}
+
+#[derive(Component, Debug, Hash, Eq, Copy, Clone)]
 pub struct ChunkPos {
     x: u32,
     y: u32
@@ -69,5 +77,19 @@ impl ChunkPos {
 
     pub fn y(&self) -> u32 {
         self.y
+    }
+}
+
+impl PartialEq for ChunkPos {
+    fn eq(&self, other: &Self) -> bool {
+        self.x == other.x && self.y == other.y
+    }
+}
+
+impl Add for ChunkPos {
+    type Output = Self;
+
+    fn add(self, other: Self) -> Self {
+        Self::new(self.x + other.x, self.y + other.y)
     }
 }

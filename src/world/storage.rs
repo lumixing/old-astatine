@@ -33,7 +33,7 @@ impl ChunkData {
         let mut rng = rand::thread_rng();
         Self {
             // blocks: vec![0; (CHUNK_SIZE*CHUNK_SIZE) as usize]
-            blocks: (0..CHUNK_SIZE*CHUNK_SIZE).map(|_| rng.gen_range(0..2)).collect()
+            blocks: (0..CHUNK_SIZE*CHUNK_SIZE).map(|_| rng.gen_range(2..4)).collect()
         }
     }
 

@@ -1,5 +1,7 @@
 use bevy::{prelude::*, core_pipeline::clear_color::ClearColorConfig};
 
+use super::player::Player;
+
 #[derive(Component)]
 pub struct PlayerCamera;
 
@@ -12,4 +14,14 @@ pub fn spawn(mut commands: Commands) {
         camera_bundle,
         PlayerCamera
     ));
+}
+
+pub fn follow_player(
+    mut camera_query: Query<&mut Transform, With<PlayerCamera>>,
+    player_query: Query<&Transform, (With<Player>, Without<PlayerCamera>)>
+) {
+    let mut camera_transform = camera_query.single_mut();
+    let player_transform = player_query.single();
+
+    camera_transform.translation = player_transform.translation;
 }

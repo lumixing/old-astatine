@@ -4,7 +4,7 @@ use bevy_tileset::prelude::Tileset;
 
 use crate::states::GameState;
 
-mod position;
+pub mod position;
 mod storage;
 mod chunks;
 mod generation;
@@ -29,8 +29,8 @@ impl Plugin for WorldPlugin {
         app.init_resource::<chunks::LoadedChunks>(); 
 
         app.add_systems((
-            chunks::spawn_all_chunks,
-        ).in_schedule(OnEnter(GameState::InGame)));
+            chunks::spawn_chunks_near_player,
+        ).in_set(OnUpdate(GameState::InGame)));
 
         app.add_plugin(generation::WorldGenerationPlugin);
     }
