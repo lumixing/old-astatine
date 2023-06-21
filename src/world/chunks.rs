@@ -31,23 +31,6 @@ impl LoadedChunks {
     }
 }
 
-// pub fn spawn_all_chunks(
-//     mut commands: Commands,
-//     mut loaded_chunks: ResMut<LoadedChunks>,
-//     world_storage: Res<WorldStorage>,
-//     tilesets: Tilesets,
-// ) {
-//     let tileset = tilesets.get_by_name("world_tiles").unwrap();
-//     for y in 0..WORLD_SIZE.y {
-//         for x in 0..WORLD_SIZE.x {
-//             let chunk_pos = ChunkPos::new(x as u32, y as u32); 
-//             let chunk_data = world_storage.get_chunk_data(chunk_pos).unwrap();
-//             let chunk_entity = spawn_chunk(&mut commands, tileset, chunk_pos, chunk_data).unwrap();
-//             loaded_chunks.add_chunk(chunk_pos, chunk_entity);
-//         }
-//     }
-// }
-
 pub fn spawn_chunks_near_player(
     mut commands: Commands,
     tilesets: Tilesets,

@@ -4,9 +4,9 @@ use bevy_tileset::prelude::Tileset;
 
 use crate::states::GameState;
 
-pub mod position;
+pub(crate) mod position;
 mod storage;
-mod chunks;
+pub(crate) mod chunks;
 mod generation;
 
 #[allow(dead_code)]
