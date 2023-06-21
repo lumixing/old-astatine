@@ -4,11 +4,16 @@ use rand::seq::SliceRandom;
 use states::GameState;
 
 mod states;
+mod player;
+mod world;
 
 pub fn app() -> App {
     let mut app = App::new();
     let splashes = ["with a new coat of rust", "somewhat safe code", "will probably perform better"];
     let splash = splashes.choose(&mut rand::thread_rng()).unwrap();
+
+    app.add_state::<GameState>();
+    app.add_loading_state(LoadingState::new(GameState::AssetLoading).continue_to_state(GameState::WorldGeneration));
     
     app.add_plugins(
         DefaultPlugins
@@ -21,11 +26,10 @@ pub fn app() -> App {
                 }),
                 ..default()
             })
-            .set(ImagePlugin::default_nearest()),
+            .set(ImagePlugin::default_nearest())
     );
-
-    app.add_state::<GameState>();
-    app.add_loading_state(LoadingState::new(GameState::AssetLoading).continue_to_state(GameState::WorldGeneration));
+    app.add_plugin(player::PlayerPlugin);
+    app.add_plugin(world::WorldPlugin);
 
     app
 }
